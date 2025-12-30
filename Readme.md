@@ -122,6 +122,10 @@ Hooks into `TigonServiceLayer` (a named, non-obfuscated class) and blocks reques
 
 ## Updating for New Instagram Versions
 
+I'll update this project to support new Instagram versions as they are released. When a new version comes out, I'll apply the necessary patches and release an updated APK.
+
+To apply patches to a new Instagram version yourself:
+
 1. Find IgTabHostFragmentFactory:
    ```bash
    grep -rl '"fragment_clips"' instagram_source/smali*/
@@ -140,6 +144,14 @@ This is a personal project I'm sharing with the community. Contributions are wel
 - 🔧 **Pull requests** - Improvements and fixes are appreciated
 - 📋 **Copy it** - Use the code however you want
 - ✨ **Enhance it** - Build something even better
+
+## Donations
+
+If you find this project useful and want to support its development, you can send a donation via Bitcoin:
+
+**BTC:** `bc1qa0xyd9n0fy0hhk2mzg5g5zy8l7lc0t728f0jnq`
+
+Your support is greatly appreciated! 🙏
 
 ## License
 
