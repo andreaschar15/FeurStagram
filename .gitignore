@@ -1,0 +1,22 @@
+# Build outputs
+*.apk
+*.idsig
+
+# Decompiled source (generated during patching)
+instagram_source/
+
+# IDE
+*.iml
+.gradle
+/.idea
+.DS_Store
+
+# Android
+/local.properties
+/captures
+.externalNativeBuild
+.cxx
+
+# Python
+__pycache__/
+*.pyc
