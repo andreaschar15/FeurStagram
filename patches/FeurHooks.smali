@@ -75,6 +75,13 @@
     move-result v2
     if-nez v2, :cond_block
 
+
+    # Optionally block Stories
+    #const-string v1, "/feed/reels_tray"
+    #invoke-virtual {v0, v1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+    #move-result v2
+    #if-nez v2, :cond_block
+
     # Block explore content
     const-string v1, "/discover/topical_explore"
     invoke-virtual {v0, v1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
