@@ -78,9 +78,14 @@ brew install apktool android-commandlinetools openjdk python3
    ./patch.sh instagram.apk
    ```
 
+  To also block stories:
+  ```bash
+  ./patch.sh --block-stories instagram.apk
+  ```
+
 3. **Install the patched APK:**
    ```bash
-   adb install -r feurstagram_patched.apk
+  adb install -r artifacts/feurstagram_patched_<instagram_apk_name>_stories_enabled.apk
    ```
 
 4. **Cleanup build artifacts:**

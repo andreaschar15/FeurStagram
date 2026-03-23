@@ -26,6 +26,7 @@ KEYSTORE="${FEURSTAGRAM_KEYSTORE:-$SCRIPT_DIR/feurstagram.keystore}"
 KEYSTORE_PASS="${FEURSTAGRAM_KEYSTORE_PASS:-}"
 KEY_ALIAS="${FEURSTAGRAM_KEY_ALIAS:-feurstagram}"
 KEY_PASS="${FEURSTAGRAM_KEY_PASS:-$KEYSTORE_PASS}"
+BLOCK_STORIES=false
 
 # Find Android build-tools
 find_build_tools() {
@@ -110,12 +111,39 @@ patch_apk() {
     local INPUT_BASENAME
     INPUT_BASENAME="$(basename "$INPUT_APK" .apk)"
     local OUTPUT_DIR="$SCRIPT_DIR/artifacts"
-    local OUTPUT_APK="$OUTPUT_DIR/feurstagram_patched_${INPUT_BASENAME}.apk"
+    local VARIANT_SUFFIX="stories_enabled"
+    if [ "$BLOCK_STORIES" = true ]; then
+        VARIANT_SUFFIX="stories_blocked"
+    fi
+    local OUTPUT_APK="$OUTPUT_DIR/feurstagram_patched_${INPUT_BASENAME}_${VARIANT_SUFFIX}.apk"
     mkdir -p "$OUTPUT_DIR"
     
     # Step 1: Decompile
     echo -e "\n${YELLOW}[1/6] Decompiling APK...${NC}"
-    rm -rf "$WORK_DIR"
+    if [ -d "$WORK_DIR" ]; then
+        python3 - "$WORK_DIR" <<'PY'
+import shutil
+import sys
+import time
+
+work_dir = sys.argv[1]
+last_error = None
+for _ in range(5):
+    try:
+        shutil.rmtree(work_dir)
+        last_error = None
+        break
+    except FileNotFoundError:
+        last_error = None
+        break
+    except OSError as err:
+        last_error = err
+        time.sleep(1)
+
+if last_error is not None:
+    raise last_error
+PY
+    fi
     apktool d --no-res "$INPUT_APK" -o "$WORK_DIR"
     echo -e "${GREEN}✓ Decompiled${NC}"
     
@@ -124,6 +152,17 @@ patch_apk() {
     mkdir -p "$WORK_DIR/smali_classes17/com/feurstagram"
     cp "$PATCHES_DIR/FeurConfig.smali" "$WORK_DIR/smali_classes17/com/feurstagram/"
     cp "$PATCHES_DIR/FeurHooks.smali" "$WORK_DIR/smali_classes17/com/feurstagram/"
+
+    if [ "$BLOCK_STORIES" = true ]; then
+        local HOOKS_FILE="$WORK_DIR/smali_classes17/com/feurstagram/FeurHooks.smali"
+        sed -i '' 's|^    #const-string v1, "/feed/reels_tray"|    const-string v1, "/feed/reels_tray"|' "$HOOKS_FILE"
+        sed -i '' 's|^    #invoke-virtual {v0, v1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z|    invoke-virtual {v0, v1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z|' "$HOOKS_FILE"
+        sed -i '' 's|^    #move-result v2|    move-result v2|' "$HOOKS_FILE"
+        sed -i '' 's|^    #if-nez v2, :cond_block|    if-nez v2, :cond_block|' "$HOOKS_FILE"
+        echo -e "${GREEN}✓ Stories blocking enabled${NC}"
+    else
+        echo -e "${GREEN}✓ Stories blocking disabled (stories remain visible)${NC}"
+    fi
     echo -e "${GREEN}✓ Added FeurConfig.smali and FeurHooks.smali${NC}"
     
     # Step 3: Patch network layer...
@@ -166,7 +205,7 @@ patch_apk() {
 
 # Print usage
 usage() {
-    echo "Usage: $0 <instagram.apk>"
+    echo "Usage: $0 [--block-stories] <instagram.apk>"
     echo ""
     echo "Patches an Instagram APK to create Feurstagram (Distraction-Free Instagram)"
     echo ""
@@ -180,6 +219,7 @@ usage() {
     echo "  - Feed posts (Stories remain visible)"
     echo "  - Explore content"
     echo "  - Reels content"
+    echo "  - Stories (optional, with --block-stories)"
     echo ""
     echo "Features preserved:"
     echo "  - Stories"
@@ -189,15 +229,39 @@ usage() {
 }
 
 # Main
-if [ $# -ne 1 ]; then
+INPUT_APK=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --block-stories)
+            BLOCK_STORIES=true
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            if [ -z "$INPUT_APK" ]; then
+                INPUT_APK="$1"
+            else
+                echo -e "${RED}Error: Unexpected argument: $1${NC}"
+                usage
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+
+if [ -z "$INPUT_APK" ]; then
     usage
     exit 1
 fi
 
-if [ ! -f "$1" ]; then
-    echo -e "${RED}Error: File not found: $1${NC}"
+if [ ! -f "$INPUT_APK" ]; then
+    echo -e "${RED}Error: File not found: $INPUT_APK${NC}"
     exit 1
 fi
 
 check_dependencies
-patch_apk "$1"
+patch_apk "$INPUT_APK"
